@@ -8,7 +8,6 @@
     "lint:fix": "biome check . --write"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
     "turbo": "^2.5.8",
     "typescript": "5.9.2",
     "@biomejs/biome": "1.9.4"
