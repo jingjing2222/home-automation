@@ -3,9 +3,7 @@ version: "3.8"
 services:
   # Backend 서비스 (Hono)
   backend:
-    build:
-      context: .
-      dockerfile: ./apps/backend/Dockerfile
+    image: ${DOCKER_USERNAME}/smart-entrance-backend:latest
     container_name: smart-entrance-backend
     ports:
       - "8080:8080"
@@ -37,11 +35,7 @@ services:
 
   # 센서 서비스 (Python PIR 센서 컨트롤러)
   sensor:
-    build:
-      context: .
-      dockerfile: ./sensor/porchLight/Dockerfile
-      args:
-        INSTALL_RPI_GPIO: "true"
+    image: ${DOCKER_USERNAME}/smart-entrance-sensor:latest
     container_name: smart-entrance-sensor
     privileged: true
     devices:
@@ -96,7 +90,7 @@ services:
     environment:
       # watchTower 설정
       - WATCHTOWER_CLEANUP=true # 이전 이미지 정리
-      - WATCHTOWER_POLL_INTERVAL=6000 # 24시간마다 체크 (초 단위)
+      - WATCHTOWER_POLL_INTERVAL=300 # 5분마다 체크 (초 단위)
       - WATCHTOWER_INCLUDE_STOPPED=false # 중지된 컨테이너 무시
       - WATCHTOWER_INCLUDE_RESTARTING=false # 재시작 중인 컨테이너 무시
       - WATCHTOWER_REVIVE_STOPPED=false # 중지된 컨테이너 재시작 안 함
