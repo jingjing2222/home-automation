@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "./trpc";
+import { getRepositories } from "./db";
 
 // 스키마 정의
 const HelloInput = z.object({ name: z.string().optional() });
@@ -16,17 +17,6 @@ export type GetUserByIdInput = z.infer<typeof GetUserByIdInput>;
 export type CreateUserInput = z.infer<typeof CreateUserInput>;
 export type UpdateDeviceStatusInput = z.infer<typeof UpdateDeviceStatusInput>;
 
-// 샘플 데이터
-const users = [
-  { id: 1, name: "Alice", email: "alice@example.com" },
-  { id: 2, name: "Bob", email: "bob@example.com" }
-];
-
-const devices = [
-  { id: 1, name: "Smart Light", status: "on", location: "Living Room" },
-  { id: 2, name: "Smart AC", status: "off", location: "Bedroom" }
-];
-
 export const appRouter = router({
   hello: publicProcedure.input(HelloInput).query(({ input }) => {
     return {
@@ -34,41 +24,37 @@ export const appRouter = router({
     };
   }),
 
-  getUsers: publicProcedure.query(() => {
-    return users;
+  // Users procedures
+  getUsers: publicProcedure.query(async () => {
+    const { users } = await getRepositories();
+    return users.getAll();
   }),
 
   getUserById: publicProcedure
     .input(GetUserByIdInput)
-    .query(({ input }) => {
-      const user = users.find((u) => u.id === input.id);
-      if (!user) throw new Error("User not found");
-      return user;
+    .query(async ({ input }) => {
+      const { users } = await getRepositories();
+      return users.getById(input.id);
     }),
 
   createUser: publicProcedure
     .input(CreateUserInput)
-    .mutation(({ input }) => {
-      const newUser = {
-        id: Math.max(...users.map((u) => u.id)) + 1,
-        name: input.name,
-        email: input.email
-      };
-      users.push(newUser);
-      return newUser;
+    .mutation(async ({ input }) => {
+      const { users } = await getRepositories();
+      return users.create(input.name, input.email);
     }),
 
-  getDevices: publicProcedure.query(() => {
-    return devices;
+  // Devices procedures
+  getDevices: publicProcedure.query(async () => {
+    const { devices } = await getRepositories();
+    return devices.getAll();
   }),
 
   updateDeviceStatus: publicProcedure
     .input(UpdateDeviceStatusInput)
-    .mutation(({ input }) => {
-      const device = devices.find((d) => d.id === input.id);
-      if (!device) throw new Error("Device not found");
-      device.status = input.status;
-      return device;
+    .mutation(async ({ input }) => {
+      const { devices } = await getRepositories();
+      return devices.updateStatus(input.id, input.status);
     })
 });
 
