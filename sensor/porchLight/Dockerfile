@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install RPi.GPIO only on Raspberry Pi (when INSTALL_RPI_GPIO=true)
 RUN if [ "$INSTALL_RPI_GPIO" = "true" ]; then \
-    pip install --no-cache-dir RPi.GPIO==0.7.0; \
+    pip install --no-cache-dir RPi.GPIO; \
     fi
 
 # Copy application code
