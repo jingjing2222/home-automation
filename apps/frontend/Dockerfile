@@ -38,7 +38,7 @@ RUN pnpm install --prod
 # Stage 1에서 빌드한 .next, public 복사
 COPY --from=builder /app/apps/frontend/.next ./apps/frontend/.next
 COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
-COPY apps/frontend/next.config.ts ./apps/frontend/
+COPY apps/frontend/next.config.js ./apps/frontend/
 
 WORKDIR /app/apps/frontend
 
