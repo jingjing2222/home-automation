@@ -484,3 +484,136 @@ jobs:
 DOCKER_USERNAME    # Docker Hub 사용자명
 DOCKER_PASSWORD    # Docker Hub 액세스 토큰
 ```
+
+---
+
+## Frontend 배포 (Docker Hub + watchTower)
+
+### 배포 흐름
+
+```
+Git push
+  ↓
+GitHub Actions (.github/workflows/build-and-push.yml)
+  ↓
+Docker build (apps/frontend/Dockerfile)
+  ↓
+Docker Hub push → user/smart-entrance-frontend:latest
+  ↓
+watchTower 감시 (라즈베리파이의 docker-compose)
+  ↓
+자동 이미지 pull → 컨테이너 재시작
+  ↓
+포트 3001에서 실행
+```
+
+### docker-compose.yml에 Frontend 추가
+
+```yaml
+frontend:
+  image: ${DOCKER_USERNAME}/smart-entrance-frontend:latest
+  container_name: smart-entrance-frontend
+  ports:
+    - "3001:3000"
+  environment:
+    - NEXT_PUBLIC_BACKEND_URL=http://backend:8080
+  restart: unless-stopped
+  networks:
+    - smart-entrance
+  depends_on:
+    - backend
+  healthcheck:
+    test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 10s
+  labels:
+    - "com.centurylinklabs.watchtower.enable=true"
+```
+
+**주의:**
+- `${DOCKER_USERNAME}` 환경 변수 설정 필요
+- 내부 포트: 3000 (Next.js)
+- 외부 포트: 3001
+
+### .env 파일 설정 (라즈베리파이)
+
+docker-compose 실행 시 환경 변수 설정:
+
+```bash
+# .env
+DOCKER_USERNAME=your-docker-username
+```
+
+또는 명령어로:
+```bash
+export DOCKER_USERNAME=your-docker-username
+docker-compose up -d
+```
+
+### GitHub Actions 설정
+
+**필수 Secrets 추가:**
+1. `DOCKER_USERNAME` - Docker Hub 사용자명
+2. `DOCKER_PASSWORD` - Docker Hub 액세스 토큰
+
+**Workflow 파일:**
+`.github/workflows/build-and-push.yml`
+
+Backend, Sensor, Frontend 모두 빌드해서 Docker Hub에 push합니다.
+
+```
+services:
+  - backend
+  - sensor
+  - frontend
+```
+
+각 서비스별 이미지:
+- `docker.io/{username}/smart-entrance-backend:latest`
+- `docker.io/{username}/smart-entrance-sensor:latest`
+- `docker.io/{username}/smart-entrance-frontend:latest`
+
+### 로컬 개발 (라즈베리파이에서)
+
+**전체 시스템 시작:**
+```bash
+# 환경 변수 설정
+export DOCKER_USERNAME=your-docker-username
+
+# 시스템 시작
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f frontend
+docker-compose logs -f backend
+docker-compose logs -f sensor
+docker-compose logs -f watchtower
+```
+
+**Frontend 접속:**
+```
+http://localhost:3001
+```
+
+**Backend API:**
+```
+http://localhost:8080
+```
+
+**watchTower 자동 업데이트:**
+- 24시간마다 Docker Hub 확인
+- 새 이미지 발견 시 자동 pull & 재배포
+- 이전 이미지 자동 정리
+
+### Coolify 추가 설정 (선택사항 - 외부 공개용)
+
+현재는 docker-compose로 관리되므로, 만약 Coolify를 통해 **외부(myhome.duckdns.org)로 배포**하고 싶다면:
+
+1. Coolify에서 "Docker Hub Image" 타입 프로젝트 생성
+2. 이미지: `{username}/smart-entrance-frontend:latest`
+3. Coolify가 자동으로 감시 → 배포
+4. SSL/TLS (Let's Encrypt) 자동 설정
+
+현재 로컬 docker-compose 방식이 더 간단하고 효율적입니다.
