@@ -9,11 +9,13 @@
       "**/package.json",
       "**/dist/**",
       "**/build/**",
+      ".next/**",
       "node_modules/**",
       "**/*.js",
       "**/ios/**",
       "**/android/**",
-      "doc_build/**"
+      "doc_build/**",
+      "**/style.css"
     ]
   },
   "formatter": {
@@ -58,7 +60,8 @@
         "useExhaustiveDependencies": "off"
       },
       "complexity": {
-        "useLiteralKeys": "off"
+        "useLiteralKeys": "off",
+        "noBannedTypes": "off"
       },
       "style": {
         "useNodejsImportProtocol": "off",
