@@ -20,14 +20,12 @@
 │  └────────────────────────────────────────┘                │
 │                      ↑ tRPC                                │
 │  ┌────────────────────────────────────────┐                │
-│  │  Coolify                               │                │
-│  │  └─ Next.js (port 3000)                │                │
-│  │     - Git push → 자동 배포              │                │
-│  │     - SSL (Let's Encrypt)              │                │
+│  │  Next.js (port 3000)                    │                │
+│  │  - Docker Compose 배포                  │                │
 │  └────────────────────────────────────────┘                │
 └─────────────────────────────────────────────────────────────┘
-         ↕ DDNS (myhome.duckdns.org) + 포트포워딩
-    [외부 브라우저 접속]
+         ↓
+    [로컬 브라우저 접속: http://raspberrypi.local:3001]
 ```
 
 ---
@@ -50,7 +48,7 @@
 - TypeScript
 - tsdown/rolldown/Vite (번들러)
 
-### Frontend (Coolify 배포)
+### Frontend (Docker Compose 배포)
 
 - Next.js
 - React
@@ -68,10 +66,9 @@
 
 ### 배포
 
-- Coolify (Next.js만)
-- Docker (Backend + Sensor)
-- GitHub Actions (CI/CD)
-- DDNS + 포트포워딩
+- Docker Compose (Backend + Frontend + Sensor)
+- GitHub Actions (CI/CD - Docker Hub 이미지 빌드)
+- watchTower (자동 이미지 업데이트)
 
 ### 개발 도구
 
@@ -142,10 +139,9 @@ PIR 센서
 ### 대시보드 조회
 
 ```
-브라우저 (https://myhome.duckdns.org)
-  → Coolify (SSL)
-  → Next.js
-  → tRPC (localhost:4000)
+브라우저 (http://raspberrypi.local:3001)
+  → Next.js (포트 3001)
+  → tRPC (http://backend:8080)
   → Hono Backend
   → PGlite DB
 ```
@@ -256,21 +252,17 @@ services:
 
 ## 네트워크
 
-### 내부
+### 로컬 네트워크
 
 ```
-Sensor → localhost:4000 (Backend)
-Next.js → localhost:4000 (Backend)
-```
+같은 네트워크의 브라우저 접속:
+  - http://raspberrypi.local:3001 (호스트명)
+  - http://<라즈베리파이-IP>:3001 (IP 주소)
+    예) http://192.168.1.100:3001
 
-### 외부
-
-```
-인터넷
-  → myhome.duckdns.org (DDNS)
-  → 포트포워딩 (443 → 3000)
-  → Coolify (SSL)
-  → Next.js
+내부 Docker 통신:
+  - 센서 → http://backend:8080/sensor (REST API)
+  - 프론트 → http://backend:8080 (tRPC)
 ```
 
 ---
