@@ -3,7 +3,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsdown src/index.ts --outDir dist --format esm",
+    "build:tsc": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"
   },
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
+    "tsdown": "^0.15.8",
     "tsx": "^4.7.1",
     "typescript": "^5.8.3"
   }

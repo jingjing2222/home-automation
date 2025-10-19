@@ -72,10 +72,12 @@ app.get("/", (c) => {
   await initDb();
   console.log("Database initialized");
 
+  const port = parseInt(process.env.PORT || "8080", 10);
+
   serve(
     {
       fetch: app.fetch,
-      port: 8080
+      port
     },
     (info) => {
       console.log(`Server is running on http://localhost:${info.port}`);
