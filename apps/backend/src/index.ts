@@ -3,6 +3,7 @@ import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { appRouter } from "./router";
+import { initDb } from "./db";
 
 const app = new Hono();
 
@@ -24,15 +25,21 @@ app.use(
 );
 
 app.get("/", (c) => {
-  return c.text("Hello Hono!");
+  return c.text("Hello Hono with pglite!");
 });
 
-serve(
-  {
-    fetch: app.fetch,
-    port: 3000
-  },
-  (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
-  }
-);
+// 서버 시작
+(async () => {
+  await initDb();
+  console.log("Database initialized");
+
+  serve(
+    {
+      fetch: app.fetch,
+      port: 3000
+    },
+    (info) => {
+      console.log(`Server is running on http://localhost:${info.port}`);
+    }
+  );
+})();

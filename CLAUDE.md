@@ -75,8 +75,7 @@
 
 ### 개발 도구
 
-- oxlint
-- oxc_formatter
+- biome
 
 ---
 
