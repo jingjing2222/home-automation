@@ -1,12 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
-import { createUserRepository } from "./repositories/userRepository";
-import { createDeviceRepository } from "./repositories/deviceRepository";
+import { createLogRepository } from "./repositories/logRepository";
 
 let db: PGlite;
 
 interface Repositories {
-  users: ReturnType<typeof createUserRepository>;
-  devices: ReturnType<typeof createDeviceRepository>;
+  logs: ReturnType<typeof createLogRepository>;
 }
 
 let repositories: Repositories | null = null;
@@ -18,32 +16,29 @@ export async function initDb(): Promise<PGlite> {
 
   // 테이블 생성
   await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS entrance_logs (
       id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE
+      timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+      duration INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
     );
 
-    CREATE TABLE IF NOT EXISTS devices (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'off',
-      location TEXT NOT NULL
-    );
+    CREATE INDEX IF NOT EXISTS idx_timestamp ON entrance_logs(timestamp);
   `);
 
-  // 초기 데이터 삽입
-  await db.exec(`
-    INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com') ON CONFLICT DO NOTHING;
-    INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com') ON CONFLICT DO NOTHING;
-    INSERT INTO devices (name, status, location) VALUES ('Smart Light', 'on', 'Living Room') ON CONFLICT DO NOTHING;
-    INSERT INTO devices (name, status, location) VALUES ('Smart AC', 'off', 'Bedroom') ON CONFLICT DO NOTHING;
-  `);
+  // 샘플 entrance_logs 데이터 삽입 (테스트용)
+  const now = new Date();
+  for (let i = 0; i < 10; i++) {
+    const timestamp = new Date(now.getTime() - i * 3600000);
+    await db.query(
+      "INSERT INTO entrance_logs (timestamp, duration) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+      [timestamp.toISOString(), Math.floor(Math.random() * 120) + 10]
+    );
+  }
 
   // Repository 생성
   repositories = {
-    users: createUserRepository(db),
-    devices: createDeviceRepository(db)
+    logs: createLogRepository(db)
   };
 
   return db;

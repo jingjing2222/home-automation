@@ -1,149 +1,117 @@
 "use client";
 
 import { trpc } from "@/lib/trpc-react";
-import { useState } from "react";
 
 export default function Home() {
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-
   // Queries
-  const helloQuery = trpc.hello.useQuery({ name: "tRPC" });
-  const usersQuery = trpc.getUsers.useQuery();
-  const devicesQuery = trpc.getDevices.useQuery();
-  const userByIdQuery = trpc.getUserById.useQuery(
-    { id: selectedUserId! },
-    { enabled: selectedUserId !== null }
-  );
-
-  // Mutations
-  const createUserMutation = trpc.createUser.useMutation({
-    onSuccess: () => {
-      usersQuery.refetch();
-    }
-  });
-
-  const updateDeviceStatusMutation = trpc.updateDeviceStatus.useMutation({
-    onSuccess: () => {
-      devicesQuery.refetch();
-    }
-  });
-
-  const handleCreateUser = () => {
-    createUserMutation.mutate({
-      name: "Charlie",
-      email: "charlie@example.com"
-    });
-  };
-
-  const handleToggleDevice = (deviceId: number, currentStatus: string) => {
-    updateDeviceStatusMutation.mutate({
-      id: deviceId,
-      status: currentStatus === "on" ? "off" : "on"
-    });
-  };
+  const recentLogsQuery = trpc["logs.getRecent"].useQuery({ limit: 20 });
+  const dailyStatsQuery = trpc["logs.getDailyStats"].useQuery({ days: 7 });
+  const liveStatsQuery = trpc["logs.getLiveStats"].useQuery();
+  const healthQuery = trpc.health.useQuery();
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <h1 className="text-4xl font-bold">tRPC Endpoints Demo</h1>
-
-        {/* Hello Query */}
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">GET /hello</h2>
-          {helloQuery.isLoading && <p>Loading...</p>}
-          {helloQuery.error && <p className="text-red-600">Error</p>}
-          {helloQuery.data && (
-            <p className="text-green-600 font-medium">{helloQuery.data.greeting}</p>
-          )}
-        </div>
-
-        {/* Get Users */}
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">GET /users</h2>
-          {usersQuery.isLoading && <p>Loading...</p>}
-          {usersQuery.error && <p className="text-red-600">Error</p>}
-          {usersQuery.data && (
-            <div className="space-y-2">
-              {usersQuery.data.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => setSelectedUserId(user.id)}
-                  className="block w-full text-left p-3 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer"
-                >
-                  {user.name} ({user.email})
-                </button>
-              ))}
+    <div className="min-h-screen p-8 bg-gray-900 text-white">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-4xl font-bold">스마트 현관 IoT</h1>
+          {healthQuery.data && (
+            <div className="text-sm text-gray-400">
+              {new Date(healthQuery.data.timestamp).toLocaleTimeString()}
             </div>
           )}
-          <button
-            onClick={handleCreateUser}
-            disabled={createUserMutation.isPending}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {createUserMutation.isPending ? "Creating..." : "Create New User"}
-          </button>
         </div>
 
-        {/* Get User By ID */}
-        {selectedUserId && (
-          <div className="p-6 bg-white rounded-lg shadow">
-            <h2 className="text-2xl font-semibold mb-4">GET /users/:id</h2>
-            {userByIdQuery.isLoading && <p>Loading...</p>}
-            {userByIdQuery.error && <p className="text-red-600">Error</p>}
-            {userByIdQuery.data && (
-              <div className="space-y-2">
-                <p>
-                  <strong>ID:</strong> {userByIdQuery.data.id}
-                </p>
-                <p>
-                  <strong>Name:</strong> {userByIdQuery.data.name}
-                </p>
-                <p>
-                  <strong>Email:</strong> {userByIdQuery.data.email}
-                </p>
-              </div>
-            )}
-            <button
-              onClick={() => setSelectedUserId(null)}
-              className="mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-            >
-              Close
-            </button>
+        {/* Live Stats */}
+        {liveStatsQuery.data && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-blue-600 p-6 rounded-lg">
+              <p className="text-sm text-blue-100">오늘 감지 횟수</p>
+              <p className="text-4xl font-bold">
+                {liveStatsQuery.data.todayCount}
+              </p>
+            </div>
+            <div className="bg-green-600 p-6 rounded-lg">
+              <p className="text-sm text-green-100">평균 지속 시간</p>
+              <p className="text-4xl font-bold">
+                {liveStatsQuery.data.avgDuration
+                  ? `${liveStatsQuery.data.avgDuration}초`
+                  : "N/A"}
+              </p>
+            </div>
+            <div className="bg-purple-600 p-6 rounded-lg">
+              <p className="text-sm text-purple-100">마지막 이벤트</p>
+              <p className="text-sm">
+                {liveStatsQuery.data.lastEvent
+                  ? new Date(liveStatsQuery.data.lastEvent).toLocaleTimeString()
+                  : "없음"}
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Get Devices */}
-        <div className="p-6 bg-white rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">GET /devices</h2>
-          {devicesQuery.isLoading && <p>Loading...</p>}
-          {devicesQuery.error && <p className="text-red-600">Error</p>}
-          {devicesQuery.data && (
+        {/* Recent Logs */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h2 className="text-2xl font-semibold mb-4">최근 이벤트</h2>
+          {recentLogsQuery.isLoading && (
+            <p className="text-gray-400">로딩 중...</p>
+          )}
+          {recentLogsQuery.error && <p className="text-red-400">오류 발생</p>}
+          {recentLogsQuery.data && recentLogsQuery.data.length > 0 ? (
             <div className="space-y-2">
-              {devicesQuery.data.map((device) => (
+              {recentLogsQuery.data.map((log) => (
                 <div
-                  key={device.id}
-                  className="p-4 bg-gray-100 rounded flex justify-between items-center"
+                  key={log.id}
+                  className="flex justify-between items-center p-3 bg-gray-700 rounded"
                 >
                   <div>
-                    <p className="font-semibold">{device.name}</p>
-                    <p className="text-sm text-gray-600">{device.location}</p>
+                    <p className="font-semibold">🚨 동작 감지</p>
+                    <p className="text-sm text-gray-400">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => handleToggleDevice(device.id, device.status)}
-                    disabled={updateDeviceStatusMutation.isPending}
-                    className={`px-4 py-2 rounded text-white ${
-                      device.status === "on"
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-gray-600 hover:bg-gray-700"
-                    } disabled:opacity-50`}
-                  >
-                    {updateDeviceStatusMutation.isPending
-                      ? "Updating..."
-                      : device.status.toUpperCase()}
-                  </button>
+                  <div className="text-right">
+                    {log.duration && (
+                      <p className="text-sm">{log.duration}초</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
+          ) : (
+            <p className="text-gray-400">이벤트가 없습니다</p>
+          )}
+        </div>
+
+        {/* Daily Stats */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h2 className="text-2xl font-semibold mb-4">일일 통계</h2>
+          {dailyStatsQuery.isLoading && (
+            <p className="text-gray-400">로딩 중...</p>
+          )}
+          {dailyStatsQuery.error && <p className="text-red-400">오류 발생</p>}
+          {dailyStatsQuery.data && dailyStatsQuery.data.length > 0 ? (
+            <div className="space-y-2">
+              {dailyStatsQuery.data.map((stat) => (
+                <div
+                  key={stat.date}
+                  className="flex justify-between items-center p-3 bg-gray-700 rounded"
+                >
+                  <div>
+                    <p className="font-semibold">{stat.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm">감지: {stat.count}회</p>
+                    {stat.avgDuration && (
+                      <p className="text-sm text-gray-400">
+                        평균: {stat.avgDuration.toFixed(1)}초
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400">데이터가 없습니다</p>
           )}
         </div>
       </div>
