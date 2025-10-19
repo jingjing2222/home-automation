@@ -65,6 +65,28 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
+  # 프론트엔드 서비스 (Next.js)
+  frontend:
+    image: ${DOCKER_USERNAME}/smart-entrance-frontend:latest
+    container_name: smart-entrance-frontend
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=${BACKEND_URL:-http://localhost:8080}
+    restart: unless-stopped
+    networks:
+      - smart-entrance
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
   # watchTower - 컨테이너 자동 업데이트 서비스
   watchtower:
     image: containrrr/watchtower:latest
