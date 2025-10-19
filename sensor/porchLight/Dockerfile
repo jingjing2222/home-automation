@@ -2,14 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install required packages
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-rpi.gpio \
     python3-dev \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies (including RPi.GPIO via pip)
 COPY sensor/porchLight/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
