@@ -160,14 +160,18 @@ PIR 센서
 CREATE TABLE entrance_logs (
   id SERIAL PRIMARY KEY,
   timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
-  event_type VARCHAR(50) NOT NULL,
-  duration INTEGER,
+  duration INTEGER NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX idx_timestamp ON entrance_logs(timestamp);
-CREATE INDEX idx_event_type ON entrance_logs(event_type);
 ```
+
+**컬럼 설명:**
+- `id`: 고유 ID
+- `timestamp`: 동작 감지 시작 시간
+- `duration`: 감지 지속 시간 (초)
+- `created_at`: 레코드 생성 시간
 
 ---
 
@@ -177,7 +181,8 @@ CREATE INDEX idx_event_type ON entrance_logs(event_type);
 
 ```
 POST /sensor
-Body: { event_type: string, duration?: number }
+Body: { duration: number }
+Response: { success: boolean, log: EntranceLog }
 ```
 
 ### tRPC (프론트 ↔ 백엔드)
@@ -187,6 +192,26 @@ logs.getRecent(limit: number) → EntranceLog[]
 logs.getDailyStats(days: number) → DailyStat[]
 logs.getLiveStats() → { todayCount, avgDuration, lastEvent }
 health() → { status, timestamp }
+```
+
+**EntranceLog:**
+```typescript
+{
+  id: number
+  timestamp: string (ISO 8601)
+  duration: number (seconds)
+  created_at: string
+}
+```
+
+**DailyStat:**
+```typescript
+{
+  date: string (YYYY-MM-DD)
+  count: number
+  avgDuration: number | null
+  lastEvent: string (ISO 8601)
+}
 ```
 
 ---

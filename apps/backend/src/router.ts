@@ -1,61 +1,43 @@
 import { z } from "zod";
-import { publicProcedure, router } from "./trpc";
 import { getRepositories } from "./db";
+import { publicProcedure, router } from "./trpc";
 
 // 스키마 정의
-const HelloInput = z.object({ name: z.string().optional() });
-const GetUserByIdInput = z.object({ id: z.number() });
-const CreateUserInput = z.object({ name: z.string(), email: z.string().email() });
-const UpdateDeviceStatusInput = z.object({
-  id: z.number(),
-  status: z.enum(["on", "off"])
-});
+const GetRecentLogsInput = z.object({ limit: z.number().default(10) });
+const GetDailyStatsInput = z.object({ days: z.number().default(7) });
 
 // 타입 추출
-export type HelloInput = z.infer<typeof HelloInput>;
-export type GetUserByIdInput = z.infer<typeof GetUserByIdInput>;
-export type CreateUserInput = z.infer<typeof CreateUserInput>;
-export type UpdateDeviceStatusInput = z.infer<typeof UpdateDeviceStatusInput>;
+export type GetRecentLogsInput = z.infer<typeof GetRecentLogsInput>;
+export type GetDailyStatsInput = z.infer<typeof GetDailyStatsInput>;
 
 export const appRouter = router({
-  hello: publicProcedure.input(HelloInput).query(({ input }) => {
-    return {
-      greeting: `Hello ${input.name || "World"}!`
-    };
-  }),
-
-  // Users procedures
-  getUsers: publicProcedure.query(async () => {
-    const { users } = await getRepositories();
-    return users.getAll();
-  }),
-
-  getUserById: publicProcedure
-    .input(GetUserByIdInput)
+  // Logs procedures
+  "logs.getRecent": publicProcedure
+    .input(GetRecentLogsInput)
     .query(async ({ input }) => {
-      const { users } = await getRepositories();
-      return users.getById(input.id);
+      const { logs } = await getRepositories();
+      return logs.getRecent(input.limit);
     }),
 
-  createUser: publicProcedure
-    .input(CreateUserInput)
-    .mutation(async ({ input }) => {
-      const { users } = await getRepositories();
-      return users.create(input.name, input.email);
+  "logs.getDailyStats": publicProcedure
+    .input(GetDailyStatsInput)
+    .query(async ({ input }) => {
+      const { logs } = await getRepositories();
+      return logs.getDailyStats(input.days);
     }),
 
-  // Devices procedures
-  getDevices: publicProcedure.query(async () => {
-    const { devices } = await getRepositories();
-    return devices.getAll();
+  "logs.getLiveStats": publicProcedure.query(async () => {
+    const { logs } = await getRepositories();
+    return logs.getLiveStats();
   }),
 
-  updateDeviceStatus: publicProcedure
-    .input(UpdateDeviceStatusInput)
-    .mutation(async ({ input }) => {
-      const { devices } = await getRepositories();
-      return devices.updateStatus(input.id, input.status);
-    })
+  // Health check
+  health: publicProcedure.query(async () => {
+    return {
+      status: "ok",
+      timestamp: new Date().toISOString()
+    };
+  })
 });
 
 export type AppRouter = typeof appRouter;
