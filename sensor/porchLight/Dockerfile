@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+ARG INSTALL_RPI_GPIO=false
+
 WORKDIR /app
 
 # Install system dependencies
@@ -8,9 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies (including RPi.GPIO via pip)
+# Install Python dependencies
 COPY sensor/porchLight/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install RPi.GPIO only on Raspberry Pi (when INSTALL_RPI_GPIO=true)
+RUN if [ "$INSTALL_RPI_GPIO" = "true" ]; then \
+    pip install --no-cache-dir RPi.GPIO==0.7.0; \
+    fi
 
 # Copy application code
 COPY sensor/porchLight/sensor_controller.py .

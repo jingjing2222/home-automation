@@ -40,6 +40,8 @@ services:
     build:
       context: .
       dockerfile: ./sensor/porchLight/Dockerfile
+      args:
+        INSTALL_RPI_GPIO: "true"
     container_name: smart-entrance-sensor
     privileged: true
     devices:
