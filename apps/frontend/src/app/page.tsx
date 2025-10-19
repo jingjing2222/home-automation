@@ -13,7 +13,7 @@ export default function Home() {
     <div className="min-h-screen p-8 bg-gray-900 text-white">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-4xl font-bold">스마트 현관 IoT</h1>
+          <h1 className="text-4xl font-bold">스마트 현관 IoT Test</h1>
           {healthQuery.data && (
             <div className="text-sm text-gray-400">
               {new Date(healthQuery.data.timestamp).toLocaleTimeString()}
