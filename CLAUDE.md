@@ -317,3 +317,170 @@ git push → Coolify webhook → 자동 빌드/배포
 - Backend/DB: 로컬 전용
 - Next.js: HTTPS (Coolify SSL)
 - 포트포워딩: 443, 80만
+
+---
+
+## 센서 컨트롤러
+
+### sensor_controller.py
+
+센서 컨트롤러는 라즈베리파이에서 PIR 센서를 모니터링하고 백엔드에 이벤트를 전송합니다.
+
+**주요 기능:**
+- PIR 센서 모니터링 (GPIO 17)
+- 릴레이 제어 (GPIO 27)
+- 백엔드 통신 (POST /sensor)
+- 자동 전등 타임아웃 제어
+- 로그 기록 (/app/logs/sensor.log)
+
+**환경 변수:**
+```
+BACKEND_URL=http://backend:4000      # 백엔드 URL
+PIR_PIN=17                            # PIR 센서 GPIO 핀
+RELAY_PIN=27                          # 릴레이 GPIO 핀
+DEBOUNCE_TIME=0.1                     # 디바운스 시간 (초)
+MIN_DETECTION_TIME=0.5                # 최소 감지 시간 (초)
+LIGHT_ON_DURATION=30                  # 전등 자동 OFF 시간 (초)
+POLLING_INTERVAL=0.1                  # 센서 폴링 간격 (초)
+```
+
+**동작 흐름:**
+```
+1. PIR 센서에서 동작 감지
+2. 감지 시간 계산
+3. 최소 감지 시간 초과 확인
+4. 릴레이로 전등 ON
+5. 백엔드에 이벤트 전송 (duration)
+6. 타임아웃 후 자동으로 전등 OFF
+7. 로그 기록
+```
+
+---
+
+## 자동 배포 (watchTower)
+
+### watchTower 설정
+
+watchTower는 Docker 이미지의 변경을 감시하고 자동으로 컨테이너를 업데이트합니다.
+
+**watchTower 기능:**
+- Docker Hub에서 새 이미지 자동 감지
+- 실행 중인 컨테이너 자동 재배포
+- 이전 이미지 자동 정리
+- 라벨 기반 선택적 업데이트
+
+**활성화 방법:**
+
+Docker Compose에서 컨테이너에 라벨 추가:
+```yaml
+labels:
+  - "com.centurylinklabs.watchtower.enable=true"
+```
+
+**watchTower 설정 변수:**
+```
+WATCHTOWER_CLEANUP=true               # 이전 이미지 정리
+WATCHTOWER_POLL_INTERVAL=86400        # 24시간마다 체크
+WATCHTOWER_INCLUDE_STOPPED=false      # 중지된 컨테이너 무시
+WATCHTOWER_INCLUDE_RESTARTING=false   # 재시작 중인 컨테이너 무시
+WATCHTOWER_DEBUG=false                # 디버그 모드
+```
+
+**배포 파이프라인:**
+```
+1. Git push to GitHub
+2. GitHub Actions 실행 → Docker Hub에 이미지 푸시
+3. watchTower가 변경 감지 (24시간마다 또는 수동 트리거)
+4. 새 이미지 다운로드
+5. 기존 컨테이너 중지
+6. 새 이미지로 컨테이너 실행
+7. 이전 이미지 정리
+```
+
+### Docker Compose 실행
+
+**전체 시스템 시작:**
+```bash
+docker-compose up -d
+```
+
+**상태 확인:**
+```bash
+docker-compose ps
+docker-compose logs -f backend
+docker-compose logs -f sensor
+docker-compose logs -f watchtower
+```
+
+**컨테이너 확인:**
+```bash
+# 모든 컨테이너 목록
+docker ps
+
+# watchTower 로그 확인
+docker logs -f smart-entrance-watchtower
+
+# 센서 로그 확인
+docker logs -f smart-entrance-sensor
+
+# 백엔드 로그 확인
+docker logs -f smart-entrance-backend
+```
+
+**컨테이너 중지:**
+```bash
+docker-compose down
+```
+
+### GitHub Actions CI/CD 설정
+
+watchTower와 연동하려면 GitHub Actions에서 Docker 이미지를 빌드하고 Docker Hub에 푸시해야 합니다.
+
+**.github/workflows/deploy.yml 예시:**
+```yaml
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches: [ main, feat/* ]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/smart-entrance
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: [backend, sensor]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./apps/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}:buildcache,mode=max
+```
+
+**GitHub Secrets 설정:**
+```
+DOCKER_USERNAME    # Docker Hub 사용자명
+DOCKER_PASSWORD    # Docker Hub 액세스 토큰
+```

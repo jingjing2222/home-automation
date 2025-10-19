@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+  # Backend 서비스 (Hono)
+  backend:
+    build:
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
+    container_name: smart-entrance-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs/backend:/app/logs
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - smart-entrance
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # 센서 서비스 (Python PIR 센서 컨트롤러)
+  sensor:
+    build:
+      context: .
+      dockerfile: ./sensor/porchLight/Dockerfile
+    container_name: smart-entrance-sensor
+    privileged: true
+    devices:
+      - /dev/gpiomem:/dev/gpiomem
+    volumes:
+      - ./logs/sensor:/app/logs
+    environment:
+      - BACKEND_URL=http://backend:8080
+      - PIR_PIN=17
+      - RELAY_PIN=27
+      - DEBOUNCE_TIME=0.1
+      - MIN_DETECTION_TIME=0.5
+      - LIGHT_ON_DURATION=30
+      - POLLING_INTERVAL=0.1
+    restart: unless-stopped
+    networks:
+      - smart-entrance
+    depends_on:
+      backend:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # watchTower - 컨테이너 자동 업데이트 서비스
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: smart-entrance-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # watchTower 설정
+      - WATCHTOWER_CLEANUP=true # 이전 이미지 정리
+      - WATCHTOWER_POLL_INTERVAL=6000 # 24시간마다 체크 (초 단위)
+      - WATCHTOWER_INCLUDE_STOPPED=false # 중지된 컨테이너 무시
+      - WATCHTOWER_INCLUDE_RESTARTING=false # 재시작 중인 컨테이너 무시
+      - WATCHTOWER_REVIVE_STOPPED=false # 중지된 컨테이너 재시작 안 함
+      - WATCHTOWER_DEBUG=false # 디버그 모드
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true # 시작 메시지 표시 안 함
+    restart: unless-stopped
+    networks:
+      - smart-entrance
+    command: --label-enable --cleanup
+
+networks:
+  smart-entrance:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local
