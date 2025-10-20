@@ -11,8 +11,8 @@ const app = new Hono();
 app.use(
   "/*",
   cors({
-    origin: "http://localhost:3001",
-    credentials: true
+    origin: "*",
+    credentials: false
   })
 );
 
