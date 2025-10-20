@@ -10,15 +10,19 @@ export const trpc = createTRPCReact<AppRouter>();
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
+  const [trpcClient] = useState(() => {
+    const backendUrl = typeof window !== 'undefined'
+      ? process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'
+      : 'http://localhost:8080';
+
+    return trpc.createClient({
       links: [
         httpBatchLink({
-          url: 'http://localhost:3000/trpc',
+          url: `${backendUrl}/trpc`,
         }),
       ],
-    })
-  );
+    });
+  });
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
